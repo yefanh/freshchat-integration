@@ -8,34 +8,33 @@ const PORT = process.env.PORT || 3000;
 const API_KEY = process.env.FRESHCHAT_API_KEY;
 const BASE_URL = process.env.FRESHCHAT_BASE_URL;
 
-// Check if API Key exists
-if (!API_KEY) {
-    console.error("Error: API Key is missing. Please check your .env file.");
+// Check required env vars
+if (!API_KEY || !BASE_URL) {
+    console.error('Error: Missing env vars. Please check your .env file.');
     process.exit(1);
 }
 
 app.use(bodyParser.json());
 
-// Webhook: Receive messages from Freshchat 
+// Webhook: Receive messages from Freshchat
 app.post('/webhook', async (req, res) => {
     try {
         const payload = req.body;
         const actor = payload.actor || {};
-        
-        // Prevent infinite loops: only reply if the sender is a "user"
+
+        // Only reply to user messages (prevent bot loop)
         if (actor.actor_type === 'user') {
-            const messageData = payload.data.message || {};
+            const messageData = payload.data?.message || {};
             const conversationId = messageData.conversation_id;
             const messageParts = messageData.message_parts || [];
-            
+
             if (messageParts.length > 0 && messageParts[0].text) {
                 const userMessage = messageParts[0].text.content;
                 console.log(`Received message: "${userMessage}"`);
-                
-                // Call the reply function
                 await replyToFreshchat(conversationId, userMessage);
             }
         }
+
         res.status(200).send('OK');
     } catch (error) {
         console.error('Webhook Error:', error.message);
@@ -43,16 +42,15 @@ app.post('/webhook', async (req, res) => {
     }
 });
 
-// Reply: Send a reply back to Freshchat 
+// Reply: Send a message back to Freshchat
 async function replyToFreshchat(conversationId, text) {
     try {
         await axios.post(
             `${BASE_URL}/conversations/${conversationId}/messages`,
             {
-                // Changed from 'agent' to 'bot' to avoid USER_NOT_FOUND error
-                actor_type: 'bot', 
+                actor_type: 'bot',
                 message_type: 'normal',
-                message_parts: [{ text: { content: `Reply: ${text}` } }]
+                message_parts: [{ text: { content: `Reply:${text}` } }]
             },
             {
                 headers: {
@@ -61,7 +59,7 @@ async function replyToFreshchat(conversationId, text) {
                 }
             }
         );
-        console.log(`Sent reply: "Reply: ${text}"`);
+        console.log(`Sent reply: "Reply:${text}"`);
     } catch (error) {
         console.error('API Error:', error.response ? error.response.data : error.message);
     }
@@ -70,5 +68,5 @@ async function replyToFreshchat(conversationId, text) {
 // Start the server
 app.listen(PORT, () => {
     console.log(`Server running on http://localhost:${PORT}`);
-    console.log(`Waiting for messages...`);
+    console.log('Waiting for messages...');
 });
