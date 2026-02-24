@@ -1,4 +1,4 @@
-# Freshchat Bot Integration (Solvea Take-home)
+# Freshchat Bot Integration
 
 A minimal Node.js/Express backend service that integrates with Freshchat webhooks. When a user sends a message, the bot automatically echoes it back.
 
